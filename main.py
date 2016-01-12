@@ -1,14 +1,19 @@
+"""
+Adam Blance, Dec 2015 - 2016
+main.py
+"""
+
 # ----Imports and Initialization---- #
 
 
-import random
-
+# import random
 import pygame
 from pygame.locals import *
 
 # import math
 
 pygame.init()
+
 
 # ----Global Variables---- #
 
@@ -18,10 +23,30 @@ display_surface = pygame.display.set_mode(current_res)  # todo: make compatible 
 
 running = True
 
-draw_queue = {}  # The draw queue handles layers
+"""
+The draw queue draws objects based on which surface they should be blitted to.
+Surface lists are housed within the queue that contain the functions used to draw GUI elements.
+"""
+
+draw_queue = {'display_surface': [], 'window1': []}
 
 
 # ----Global Functions---- #
+
+
+def draw_from_queue(queue, display_surf, **kwargs):
+    for surface in queue:
+        if surface == 'display_surface':
+            for draw_call in queue[surface]:
+                if len(draw_call) == 2:
+                    if type(draw_call[0]) == list:
+                        display_surf.fill(draw_call[0], draw_call[1])  # This is a rect fill call
+                    else:
+                        display_surf.blit(draw_call[1], draw_call[0])  # This is a blit to a surface
+                else:
+                    display_surf.fill(draw_call[0])  # This is a surface fill
+
+        del queue[surface][:]
 
 
 def modify_colour(colour, increment):
@@ -48,7 +73,11 @@ class Frame(pygame.Rect):
         super(Frame, self).__init__((0, 0), (0, 0))
 
         self.position = kwargs['position']
-        self.size = kwargs['size']
+
+        if kwargs['type'] == 'stacked' or kwargs['type'] == 'spaced':
+            self.size = kwargs['size']
+        else:
+            print('Invalid frame type. Can only be \'stacked\' or \'spaced\'')
 
         self.all_frames.append(self)
 
@@ -66,40 +95,67 @@ class Button(pygame.Rect):
             self.text = self.font.render(kwargs['text'], True, self.font_colour)
         else:
             self.text = self.font.render('No Text Specified', True, self.font_colour)
-
         if 'position' in kwargs:
             self.x = kwargs['position'][0]
             self.y = kwargs['position'][1]
         else:
             self.x = 0
             self.y = 0
-
         if 'size' in kwargs:
             self.width = kwargs['size'][0]
             self.height = kwargs['size'][1]
         else:
             self.width = self.text.get_width() + 20
             self.height = self.text.get_height() + 20
-
         if 'colour' in kwargs:
             self.colour = kwargs['colour']
         else:
             self.colour = [125, 0, 125]
-
         if 'function' in kwargs:
             self.function = kwargs['function']
         else:
             self.function = None
 
+        self.surface = kwargs['surface']
+
         self.all_buttons.append(self)
+
+    def add_button_to_queue(self, queue, surface):
+
+        if self.collidepoint(pygame.mouse.get_pos()):
+            if event.type != MOUSEBUTTONDOWN:
+                queue[surface].append((modify_colour(self.colour, 40), self))
+                queue[surface].append((self.colour, self.inflate(-12, -12)))
+            else:
+                queue[surface].append((modify_colour(self.colour, 40), self.inflate(-12, -12)))
+                queue[surface].append((modify_colour(self.colour, -30), self.inflate(-12, -12)))
+                print('No function assigned for the \'%s\' button.' % button)
+        else:
+            queue[surface].append((modify_colour(self.colour, -30), self))
+            queue[surface].append((self.colour, self.inflate(-12, -12)))
+
+        button_centre = (button.centerx - button.text.get_rect().centerx,
+                         button.centery - button.text.get_rect().centery)
+        queue[surface].append((button_centre, self.text))
 
 
 # ----Instance Declarations---- #
 
+"""
+The "surface" specified when creating GUI elements can either be a frame or a surface.
+If an object is part of a frame, it's current position will be overwritten by the frame (if one is specified).
+If the object is not part of a frame, it will be placed on the specified surface with the co-ords defined.
+"""
 
 button = Button(text='Adam\'s Button',
                 position=(600, 300),
-                function=True)
+                colour=[17, 156, 170],
+                surface='display_surface')
+
+second_button = Button(text='Adam\'s Other Button',
+                       position=(300, 300),
+                       surface='display_surface')
+
 
 # ----Main Loop---- #
 
@@ -111,52 +167,10 @@ while running:
         if event.type == QUIT:
             running = False
 
-        for button in Button.all_buttons:  # todo: fix rendering of multiple buttons (use indexes from all_buttons)
-            # todo: or just move the draw_queue resetting about a bit
-            # todo: just set it up for functions instead because draw calls are stupid
+        for button in Button.all_buttons:
+            button.add_button_to_queue(draw_queue, button.surface)
 
-            if button.collidepoint(pygame.mouse.get_pos()):
-
-                draw_queue[2] = (modify_colour(button.colour, 40), button)
-                draw_queue[3] = (button.colour, button.inflate(-12, -12))
-
-                if event.type == MOUSEBUTTONDOWN:
-                    draw_queue[3] = (modify_colour(button.colour, -25), button.inflate(-12, -12))
-
-                    if button.function:
-                        draw_queue[1] = [random.randint(1, 255), random.randint(1, 255), random.randint(1, 255)]
-                    else:
-                        print('No function assigned for the \'%s\' button.' % button)
-
-            else:
-                draw_queue[2] = (modify_colour(button.colour, -20), button)
-                draw_queue[3] = (button.colour, button.inflate(-12, -12))
-
-            button_centre = (button.centerx - button.text.get_rect().centerx,
-                             button.centery - button.text.get_rect().centery)
-
-            draw_queue[4] = (button_centre, button.text)
-
-    draw_queue_keys = sorted(draw_queue)
-
-    # print("The draw queue keys are: %s." % draw_queue_keys)
-    # print(draw_queue, "\n")
-
-    for key in draw_queue_keys:
-
-        if len(draw_queue[key]) == 3:  # ----------------------------------------------- IF IT'S A SURFACE FILL
-            display_surface.fill(draw_queue[key])
-
-        elif len(draw_queue[key]) == 2:
-
-            if type(draw_queue[key][0]) == list:
-                display_surface.fill(draw_queue[key][0], draw_queue[key][1])  # -------- IF IT'S A RECT FILL
-
-            else:
-                display_surface.blit(draw_queue[key][1], draw_queue[key][0])  # -------- IF IT'S A SURFACE BLIT
-
-    draw_queue.clear()
-    del draw_queue_keys[:]
+    draw_from_queue(draw_queue, display_surface)
 
     pygame.display.update()
 
