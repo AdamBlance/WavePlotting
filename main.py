@@ -6,7 +6,8 @@ main.py
 # ----Imports and Initialization---- #
 
 
-# import random
+import random
+
 import pygame
 from pygame.locals import *
 
@@ -28,7 +29,7 @@ The draw queue draws objects based on which surface they should be blitted to.
 Surface lists are housed within the queue that contain the functions used to draw GUI elements.
 """
 
-draw_queue = {'display_surface': [], 'window1': []}
+draw_queue = {'display_surface': [], 'window1': [], 'window2 etc...': []}
 
 
 # ----Global Functions---- #
@@ -66,18 +67,34 @@ def modify_colour(colour, increment):
 # ----Classes---- #
 
 
+# todo: Make frames scale to button size if requested by user
+
+
 class Frame(pygame.Rect):
     all_frames = []
 
     def __init__(self, **kwargs):
+
         super(Frame, self).__init__((0, 0), (0, 0))
 
-        self.position = kwargs['position']
-
-        if kwargs['type'] == 'stacked' or kwargs['type'] == 'spaced':
-            self.size = kwargs['size']
+        if 'stacked' in kwargs:
+            self.stacked = kwargs['stacked']
         else:
-            print('Invalid frame type. Can only be \'stacked\' or \'spaced\'')
+            self.stacked = True
+        if 'scale' in kwargs:
+            self.scale = kwargs['scale']
+        else:
+            self.scale = True
+        if 'position' in kwargs:
+            self.position = kwargs['position']
+        else:
+            self.position = (0, 0)
+
+        if 'elements' in kwargs:
+            for element in kwargs['elements']:
+                self.elements.append(element)
+        else:
+            print('Frame \'%s\' is empty.' % self)
 
         self.all_frames.append(self)
 
@@ -110,7 +127,7 @@ class Button(pygame.Rect):
         if 'colour' in kwargs:
             self.colour = kwargs['colour']
         else:
-            self.colour = [125, 0, 125]
+            self.colour = [random.randint(1, 255), random.randint(1, 255), random.randint(1, 255)]
         if 'function' in kwargs:
             self.function = kwargs['function']
         else:
@@ -123,13 +140,12 @@ class Button(pygame.Rect):
     def add_button_to_queue(self, queue, surface):
 
         if self.collidepoint(pygame.mouse.get_pos()):
-            if event.type != MOUSEBUTTONDOWN:
+            if not pygame.mouse.get_pressed()[0]:
                 queue[surface].append((modify_colour(self.colour, 40), self))
                 queue[surface].append((self.colour, self.inflate(-12, -12)))
             else:
                 queue[surface].append((modify_colour(self.colour, 40), self.inflate(-12, -12)))
                 queue[surface].append((modify_colour(self.colour, -30), self.inflate(-12, -12)))
-                print('No function assigned for the \'%s\' button.' % button)
         else:
             queue[surface].append((modify_colour(self.colour, -30), self))
             queue[surface].append((self.colour, self.inflate(-12, -12)))
@@ -141,20 +157,22 @@ class Button(pygame.Rect):
 
 # ----Instance Declarations---- #
 
+
 """
 The "surface" specified when creating GUI elements can either be a frame or a surface.
 If an object is part of a frame, it's current position will be overwritten by the frame (if one is specified).
 If the object is not part of a frame, it will be placed on the specified surface with the co-ords defined.
+Frame definitions should come before GUI elements housed inside them.
 """
 
+
 button = Button(text='Adam\'s Button',
-                position=(600, 300),
                 colour=[17, 156, 170],
                 surface='display_surface')
 
-second_button = Button(text='Adam\'s Other Button',
-                       position=(300, 300),
-                       surface='display_surface')
+my_frame = Frame(position=(200, 200),
+                 stacked=True,
+                 scale=True)
 
 
 # ----Main Loop---- #
@@ -167,8 +185,12 @@ while running:
         if event.type == QUIT:
             running = False
 
+        for frame in Frame.all_frames:
+            pass
+
         for button in Button.all_buttons:
             button.add_button_to_queue(draw_queue, button.surface)
+            # button.try_function_call()
 
     draw_from_queue(draw_queue, display_surface)
 
