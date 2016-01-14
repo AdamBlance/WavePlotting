@@ -3,6 +3,7 @@ Adam Blance, Dec 2015 - 2016
 main.py
 """
 
+
 # ----Imports and Initialization---- #
 
 
@@ -35,7 +36,8 @@ draw_queue = {'display_surface': [], 'window1': [], 'window2 etc...': []}
 # ----Global Functions---- #
 
 
-def draw_from_queue(queue, display_surf, **kwargs):
+def draw_from_queue(queue, display_surf):
+
     for surface in queue:
         if surface == 'display_surface':
             for draw_call in queue[surface]:
@@ -51,6 +53,7 @@ def draw_from_queue(queue, display_surf, **kwargs):
 
 
 def modify_colour(colour, increment):
+
     mod_colour = colour.copy()
 
     for value in range(0, 3):
@@ -67,7 +70,7 @@ def modify_colour(colour, increment):
 # ----Classes---- #
 
 
-# todo: Make frames scale to button size if requested by user
+# todo: Make Frame and Button inherit from GUIElement class (or something similar) to stop duplicated kwargs
 
 
 class Frame(pygame.Rect):
@@ -77,26 +80,81 @@ class Frame(pygame.Rect):
 
         super(Frame, self).__init__((0, 0), (0, 0))
 
-        if 'stacked' in kwargs:
-            self.stacked = kwargs['stacked']
-        else:
-            self.stacked = True
-        if 'scale' in kwargs:
-            self.scale = kwargs['scale']
-        else:
-            self.scale = True
-        if 'position' in kwargs:
-            self.position = kwargs['position']
-        else:
-            self.position = (0, 0)
-
+        self.elements = []
         if 'elements' in kwargs:
             for element in kwargs['elements']:
                 self.elements.append(element)
         else:
             print('Frame \'%s\' is empty.' % self)
 
+        if 'position' in kwargs:
+            self.x = kwargs['position'][0]
+            self.y = kwargs['position'][1]
+        else:
+            self.x = 0
+            self.y = 0
+
+        if 'size' in kwargs:
+            self.width = kwargs['size'][0]
+            self.height = kwargs['size'][1]
+        else:
+            self.width = 500
+            self.height = 200
+
+        if 'stacked' in kwargs:
+            self.stacked = kwargs['stacked']
+        else:
+            self.stacked = True
+
+        if 'scale' in kwargs:
+            self.scale = kwargs['scale']
+        else:
+            self.scale = True
+
+        if 'spacing' in kwargs:
+            self.spacing = kwargs['spacing']
+        else:
+            self.spacing = 100
+            print('You should really define spacing on frame \'%s\'. Defaulted to 100.' % self)
+
+        if 'direction' in kwargs:
+            self.direction = kwargs['direction']
+        else:
+            self.direction = 'right'
+            print('Incorrect direction - frame \'%s\'. Direction can be \'left\', \'right\', \'up\' or \'down\'' % self)
+
         self.all_frames.append(self)
+
+    def reassign_element_positions(self):
+
+        if self.direction == 'right':
+
+            edge_of_last_object = self.midleft
+
+            for element in self.elements:
+                element.midleft = (edge_of_last_object[0] + self.spacing, element.midleft[1])
+                edge_of_last_object = (element.midright[0], element.midright[1])
+
+        elif self.direction == 'left':
+            edge_of_last_object = self.midright
+
+            for element in self.elements:
+                element.midright = (edge_of_last_object[0] - self.spacing, element.midright[1])
+                edge_of_last_object = (element.midleft[0], element.midleft[1])
+
+        elif self.direction == 'up':
+            edge_of_last_object = self.midbottom
+
+            for element in self.elements:
+                element.midbottom = (element.midtop[0], edge_of_last_object[1] - self.spacing)
+                edge_of_last_object = (element.midtop[0], element.midtop[1])
+
+        elif self.direction == 'down':
+            edge_of_last_object = self.midtop
+
+            for element in self.elements:
+                element.midtop = (element.midbottom[0], edge_of_last_object[0] + self.spacing)
+                edge_of_last_object = (element.midbottom[0], element.midbottom[1])
 
 
 class Button(pygame.Rect):
@@ -112,43 +170,52 @@ class Button(pygame.Rect):
             self.text = self.font.render(kwargs['text'], True, self.font_colour)
         else:
             self.text = self.font.render('No Text Specified', True, self.font_colour)
+
         if 'position' in kwargs:
             self.x = kwargs['position'][0]
             self.y = kwargs['position'][1]
         else:
             self.x = 0
             self.y = 0
+
         if 'size' in kwargs:
             self.width = kwargs['size'][0]
             self.height = kwargs['size'][1]
         else:
             self.width = self.text.get_width() + 20
             self.height = self.text.get_height() + 20
+
         if 'colour' in kwargs:
             self.colour = kwargs['colour']
         else:
             self.colour = [random.randint(1, 255), random.randint(1, 255), random.randint(1, 255)]
+
         if 'function' in kwargs:
             self.function = kwargs['function']
         else:
             self.function = None
 
-        self.surface = kwargs['surface']
+        if 'surface' in kwargs:
+            self.surface = kwargs['surface']
+        else:
+            self.surface = 'display_surface'
 
         self.all_buttons.append(self)
+
+    # todo: Fix buttons not rendering properly when holding mouse button and hovering over them
 
     def add_button_to_queue(self, queue, surface):
 
         if self.collidepoint(pygame.mouse.get_pos()):
             if not pygame.mouse.get_pressed()[0]:
                 queue[surface].append((modify_colour(self.colour, 40), self))
-                queue[surface].append((self.colour, self.inflate(-12, -12)))
+                queue[surface].append((self.colour, self.inflate(-8, -8)))
             else:
-                queue[surface].append((modify_colour(self.colour, 40), self.inflate(-12, -12)))
-                queue[surface].append((modify_colour(self.colour, -30), self.inflate(-12, -12)))
+                queue[surface].append((modify_colour(self.colour, 40), self.inflate(-8, -8)))
+                queue[surface].append((modify_colour(self.colour, -30), self.inflate(-8, -8)))
         else:
             queue[surface].append((modify_colour(self.colour, -30), self))
-            queue[surface].append((self.colour, self.inflate(-12, -12)))
+            queue[surface].append((self.colour, self.inflate(-8, -8)))
 
         button_centre = (button.centerx - button.text.get_rect().centerx,
                          button.centery - button.text.get_rect().centery)
@@ -163,16 +230,36 @@ The "surface" specified when creating GUI elements can either be a frame or a su
 If an object is part of a frame, it's current position will be overwritten by the frame (if one is specified).
 If the object is not part of a frame, it will be placed on the specified surface with the co-ords defined.
 Frame definitions should come before GUI elements housed inside them.
+The order in which elements are listed in will be what the buttons look like in the frame.
 """
 
 
 button = Button(text='Adam\'s Button',
-                colour=[17, 156, 170],
-                surface='display_surface')
+                colour=[17, 156, 170])
 
-my_frame = Frame(position=(200, 200),
+second_button = Button(text='Adam\'s Other Button',
+                       colour=[122, 122, 255])
+
+button_1 = Button(text='save')
+
+button_2 = Button(text='www.reddit.com/r/mechanicalkeyboards')
+
+button_3 = Button(text='teapots')
+
+button_4 = Button(text='new')
+
+my_frame = Frame(position=(0, 0),
+                 direction='right',
                  stacked=True,
-                 scale=True)
+                 scale=True,
+                 spacing=20,
+                 size=(1280, 200),
+                 elements=(button, second_button, button_1, button_2, button_3, button_4))
+
+# display_surface.fill([60, 60, 60], my_frame)
+
+# todo: Fix bug when only placing one value in 'elements' kwarg of Frame class
+# todo: Fix Y-co-ords for frames and 'up' and 'down' frame directions
 
 
 # ----Main Loop---- #
@@ -186,14 +273,13 @@ while running:
             running = False
 
         for frame in Frame.all_frames:
-            pass
+            frame.reassign_element_positions()
 
         for button in Button.all_buttons:
             button.add_button_to_queue(draw_queue, button.surface)
             # button.try_function_call()
 
     draw_from_queue(draw_queue, display_surface)
-
     pygame.display.update()
 
 pygame.quit()
