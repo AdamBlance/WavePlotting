@@ -70,20 +70,13 @@ def modify_colour(colour, increment):
 
 # todo: Make Frame and Button inherit from GUIElement class (or something similar) to stop duplicated kwargs in __init__
 
-
-class Frame(pygame.Rect):
-    all_frames = []
+class GUIElement(pygame.Rect):
 
     def __init__(self, **kwargs):
 
-        super(Frame, self).__init__((0, 0), (0, 0))
+        super(GUIElement, self).__init__((0, 0), (0, 0))
 
-        self.elements = []
-        if 'elements' in kwargs:
-            for element in kwargs['elements']:
-                self.elements.append(element)
-        else:
-            print('Frame \'%s\' is empty.' % self)
+        print(kwargs)
 
         if 'position' in kwargs:
             self.x = kwargs['position'][0]
@@ -92,15 +85,37 @@ class Frame(pygame.Rect):
             self.x = 0
             self.y = 0
 
+        if 'colour' in kwargs:
+            self.colour = kwargs['colour']
+        else:
+            self.colour = [random.randint(20, 235), random.randint(20, 235), random.randint(20, 235)]
+
+        if 'surface' in kwargs:
+            self.surface = kwargs['surface']
+        else:
+            self.surface = 'display_surface'
+
+
+class Frame(GUIElement):
+    all_frames = []
+
+    def __init__(self, **kwargs):
+
+        super(Frame, self).__init__(**kwargs)
+
+        self.elements = []
+        if 'elements' in kwargs:
+            for element in kwargs['elements']:
+                self.elements.append(element)
+        else:
+            print('Frame \'%s\' is empty.' % self)
+
         if 'size' in kwargs:
             self.width = kwargs['size'][0]
             self.height = kwargs['size'][1]
         else:
             self.width = 500
             self.height = 200
-
-        if 'colour' in kwargs:
-            self.colour = [random.randint(20, 235), random.randint(20, 235), random.randint(20, 235)]
 
         if 'stacked' in kwargs:
             self.stacked = kwargs['stacked']
@@ -178,26 +193,19 @@ class Frame(pygame.Rect):
         queue[surface].append((self.colour, self.inflate(-8, -8)))
 
 
-class Button(pygame.Rect):
+class Button(GUIElement):
     all_buttons = []
     font = pygame.font.SysFont('ubuntumono', 16)
     font_colour = [255, 255, 255]
 
     def __init__(self, **kwargs):
 
-        super(Button, self).__init__((0, 0), (0, 0))
+        super(Button, self).__init__(**kwargs)
 
         if 'text' in kwargs:
             self.text = self.font.render(kwargs['text'], True, self.font_colour)
         else:
             self.text = self.font.render('No Text Specified', True, self.font_colour)
-
-        if 'position' in kwargs:
-            self.x = kwargs['position'][0]
-            self.y = kwargs['position'][1]
-        else:
-            self.x = 0
-            self.y = 0
 
         if 'size' in kwargs:
             self.width = kwargs['size'][0]
@@ -205,11 +213,6 @@ class Button(pygame.Rect):
         else:
             self.width = self.text.get_width() + 20
             self.height = self.text.get_height() + 20
-
-        if 'colour' in kwargs:
-            self.colour = kwargs['colour']
-        else:
-            self.colour = [random.randint(20, 235), random.randint(20, 235), random.randint(20, 235)]
 
         if 'function' in kwargs:
             self.function = kwargs['function']
@@ -287,8 +290,6 @@ my_frame = Frame(position=(0, 0),
 
 while running:
 
-    clock.tick(max_FPS)
-
     for event in pygame.event.get():
 
         if event.type == QUIT:
@@ -303,5 +304,7 @@ while running:
 
     draw_from_queue(draw_queue, display_surface)
     pygame.display.update()
+
+    clock.tick(max_FPS)
 
 pygame.quit()
