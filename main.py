@@ -33,6 +33,7 @@ draw_queue = {'display_surface': [], 'window1': [], 'window2 etc...': []}
 
 # ----Global Functions---- #
 
+# todo: The problem is here somewhere. Fix it tomorrow.
 
 def draw_from_queue(queue, display_surf):
 
@@ -68,15 +69,11 @@ def modify_colour(colour, increment):
 # ----Classes---- #
 
 
-# todo: Make Frame and Button inherit from GUIElement class (or something similar) to stop duplicated kwargs in __init__
-
 class GUIElement(pygame.Rect):
 
     def __init__(self, **kwargs):
 
         super(GUIElement, self).__init__((0, 0), (0, 0))
-
-        print(kwargs)
 
         if 'position' in kwargs:
             self.x = kwargs['position'][0]
@@ -148,44 +145,68 @@ class Frame(GUIElement):
     def reassign_element_positions(self):
 
         if self.direction == 'right':
-            edge_of_last_object = self.midleft
+
+            edge_of_last_object = self.left
+            middle_of_last_object = self.left
 
             for element in self.elements:
                 if (element.height > self.height) and self.scale:
                     self.height = element.height
 
-                element.midleft = (edge_of_last_object[0] + self.spacing, edge_of_last_object[1])
-                edge_of_last_object = (element.midright[0], element.midright[1])
+                if self.stacked:
+                    element.midleft = (edge_of_last_object + self.spacing, self.centery)
+                    edge_of_last_object = element.right
+                else:
+                    element.center = (middle_of_last_object + self.spacing, self.centery)
+                    middle_of_last_object = element.centerx
 
         elif self.direction == 'left':
-            edge_of_last_object = self.midright
+
+            edge_of_last_object = self.right
+            middle_of_last_object = self.right
 
             for element in self.elements:
                 if (element.height > self.height) and self.scale:
                     self.height = element.height
 
-                element.midright = (edge_of_last_object[0] - self.spacing, edge_of_last_object[1])
-                edge_of_last_object = (element.midleft[0], element.midleft[1])
+                if self.stacked:
+                    element.midright = (edge_of_last_object - self.spacing, self.centery)
+                    edge_of_last_object = element.left
+                else:
+                    element.center = (middle_of_last_object - self.spacing, self.centery)
+                    middle_of_last_object = element.centerx
 
         elif self.direction == 'up':
-            edge_of_last_object = self.midbottom
+
+            edge_of_last_object = self.bottom
+            middle_of_last_object = self.bottom
 
             for element in self.elements:
                 if (element.width > self.width) and self.scale:
                     self.width = element.width
 
-                element.midbottom = (edge_of_last_object[0], edge_of_last_object[1] - self.spacing)
-                edge_of_last_object = (element.midtop[0], element.midtop[1])
+                if self.stacked:
+                    element.midbottom = (self.centerx, edge_of_last_object - self.spacing)
+                    edge_of_last_object = element.up
+                else:
+                    element.center = (self.centerx, middle_of_last_object - self.spacing)
+                    middle_of_last_object = element.centery
 
         elif self.direction == 'down':
-            edge_of_last_object = self.midtop
+
+            edge_of_last_object = self.top
+            middle_of_last_object = self.top
 
             for element in self.elements:
                 if (element.width > self.width) and self.scale:
                     self.width = element.width
 
-                element.midtop = (edge_of_last_object[0], edge_of_last_object[1] + self.spacing)
-                edge_of_last_object = (element.midbottom[0], element.midbottom[1])
+                if self.stacked:
+                    element.midtop = (self.centerx, edge_of_last_object + self.spacing)
+                    edge_of_last_object = element.down
+                else:
+                    element.center = (self.centerx, middle_of_last_object + self.spacing)
+                    middle_of_last_object = element.centery
 
     def add_frame_to_queue(self, queue, surface):
 
@@ -195,7 +216,7 @@ class Frame(GUIElement):
 
 class Button(GUIElement):
     all_buttons = []
-    font = pygame.font.SysFont('ubuntumono', 16)
+    font = pygame.font.SysFont('ubuntumono', 15)
     font_colour = [255, 255, 255]
 
     def __init__(self, **kwargs):
@@ -219,23 +240,21 @@ class Button(GUIElement):
         else:
             self.function = None
 
-        if 'surface' in kwargs:
-            self.surface = kwargs['surface']
-        else:
-            self.surface = 'display_surface'
-
         self.all_buttons.append(self)
 
     # todo: Fix buttons not rendering properly when holding mouse button and hovering over them
+    # NOT A PROBLEM WITH THE QUEUE APPENDING
 
     def add_button_to_queue(self, queue, surface):
 
         if self.collidepoint(pygame.mouse.get_pos()):
 
             if not pygame.mouse.get_pressed()[0]:
+
                 queue[surface].append((modify_colour(self.colour, 40), self))
                 queue[surface].append((self.colour, self.inflate(-8, -8)))
             else:
+
                 queue[surface].append((modify_colour(self.colour, 40), self.inflate(-8, -8)))
                 queue[surface].append((modify_colour(self.colour, -30), self.inflate(-8, -8)))
 
@@ -251,40 +270,30 @@ class Button(GUIElement):
 # ----Instance Declarations---- #
 
 
-"""
-If an object is part of a frame, it's current position will be overwritten by the frame (if one is specified).
-If the object is not part of a frame, it will be placed on the specified surface with the co-ords defined.
-Frame definitions should come before GUI elements housed inside them.
-"""
+# button = Button(text='Adam\'s Button',
+#                 colour=[17, 156, 170])
+#
+# second_button = Button(text='Adam\'s Other Button',
+#                        colour=[122, 122, 255])
 
-
-button = Button(text='Adam\'s Button',
-                colour=[17, 156, 170])
-
-second_button = Button(text='Adam\'s Other Button',
-                       colour=[122, 122, 255])
-
-button_1 = Button(text='save')
-
-button_2 = Button(text='/r/mechanicalkeyboards')
-
-button_3 = Button(text='teapots')
-
-button_4 = Button(text='new')
+keypad_button_1 = Button(text='1')
+keypad_button_2 = Button(text='2')
+keypad_button_3 = Button(text='3')
+keypad_button_4 = Button(text='4')
 
 # If only a single object is in a frame, pass it in a list (e.g. elements=[button])
 
-my_frame = Frame(position=(0, 0),
+my_frame = Frame(position=(250, 260),
                  direction='down',
-                 stacked=True,
+                 stacked=False,
                  scale=True,
-                 spacing=20,
-                 size=(1280, 200),
-                 elements=(button, second_button, button_1, button_2, button_3, button_4))
+                 spacing=40,
+                 size=(700, 200),
+                 elements=(keypad_button_1, keypad_button_2, keypad_button_3, keypad_button_4))
 
-# todo: Allow 'stacked' to be turned off
 
 # ----Main Loop---- #
+
 
 # todo: Make screen clear every tick because buttons are duplicating when resizing frames
 
@@ -297,10 +306,13 @@ while running:
 
         for frame in Frame.all_frames:
             frame.reassign_element_positions()
+            frame.add_frame_to_queue(draw_queue, frame.surface)
 
         for button in Button.all_buttons:
             button.add_button_to_queue(draw_queue, button.surface)
             # button.try_function_call()
+
+            # print(draw_queue)
 
     draw_from_queue(draw_queue, display_surface)
     pygame.display.update()
