@@ -33,7 +33,6 @@ draw_queue = {'display_surface': [], 'window1': [], 'window2 etc...': []}
 
 # ----Global Functions---- #
 
-# todo: The problem is here somewhere. Fix it tomorrow.
 
 def draw_from_queue(queue, display_surf):
 
@@ -242,25 +241,24 @@ class Button(GUIElement):
 
         self.all_buttons.append(self)
 
-    # todo: Fix buttons not rendering properly when holding mouse button and hovering over them
-    # NOT A PROBLEM WITH THE QUEUE APPENDING
-
     def add_button_to_queue(self, queue, surface):
 
-        if self.collidepoint(pygame.mouse.get_pos()):
+        # This is inefficient, but I changed it so it would be easy to debug. I'll sort it out later.
 
-            if not pygame.mouse.get_pressed()[0]:
+        if self.collidepoint(pygame.mouse.get_pos()) and not pygame.mouse.get_pressed()[0]:
+            queue[surface].append((modify_colour(self.colour, 40), self))
+            queue[surface].append((self.colour, self.inflate(-8, -8)))
+            # print('hovering')
 
-                queue[surface].append((modify_colour(self.colour, 40), self))
-                queue[surface].append((self.colour, self.inflate(-8, -8)))
-            else:
-
-                queue[surface].append((modify_colour(self.colour, 40), self.inflate(-8, -8)))
-                queue[surface].append((modify_colour(self.colour, -30), self.inflate(-8, -8)))
+        elif self.collidepoint(pygame.mouse.get_pos()) and pygame.mouse.get_pressed()[0]:
+            queue[surface].append((modify_colour(self.colour, 40), self))
+            queue[surface].append((modify_colour(self.colour, -30), self.inflate(-8, -8)))
+            # print('hovering and clicking')
 
         else:
             queue[surface].append((modify_colour(self.colour, -30), self))
             queue[surface].append((self.colour, self.inflate(-8, -8)))
+            # print('nothing')
 
         button_centre = (button.centerx - button.text.get_rect().centerx,
                          button.centery - button.text.get_rect().centery)
@@ -299,20 +297,20 @@ my_frame = Frame(position=(250, 260),
 
 while running:
 
+    display_surface.fill([0, 0, 0])
+
     for event in pygame.event.get():
 
         if event.type == QUIT:
             running = False
 
-        for frame in Frame.all_frames:
-            frame.reassign_element_positions()
-            frame.add_frame_to_queue(draw_queue, frame.surface)
+    for frame in Frame.all_frames:
+        frame.reassign_element_positions()
+        frame.add_frame_to_queue(draw_queue, frame.surface)
 
-        for button in Button.all_buttons:
-            button.add_button_to_queue(draw_queue, button.surface)
-            # button.try_function_call()
-
-            # print(draw_queue)
+    for button in Button.all_buttons:
+        button.add_button_to_queue(draw_queue, button.surface)
+        # button.try_function_call()
 
     draw_from_queue(draw_queue, display_surface)
     pygame.display.update()
