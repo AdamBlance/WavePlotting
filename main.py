@@ -11,6 +11,7 @@ import random
 
 import pygame
 from pygame.locals import *
+import math
 
 pygame.init()
 
