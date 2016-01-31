@@ -12,8 +12,6 @@ import random
 import pygame
 from pygame.locals import *
 
-# import math
-
 pygame.init()
 
 
@@ -45,7 +43,10 @@ def draw_from_queue(queue, display_surf):
                     else:
                         display_surf.blit(draw_call[1], draw_call[0])  # This is a blit to a surface
                 else:
-                    display_surf.fill(draw_call[0])  # This is a surface fill
+                    if len(draw_call) != 3:  # todo: This will break if there's a wave with three points
+                        pygame.draw.lines(display_surf, [0, 255, 0], False, draw_call, 1)
+                    else:
+                        display_surf.fill(draw_call[0])  # This is a surface fill
 
         del queue[surface][:]
 
@@ -213,6 +214,25 @@ class Frame(GUIElement):
         queue[surface].append((self.colour, self.inflate(-8, -8)))
 
 
+class Wave:
+    all_waves = []
+    wave_range = range(0, 720 + 1)  # Add 1 to last number to include it
+
+    def __init__(self, function):
+        self.function = function
+        self.surface = 'display_surface'
+
+        self.all_waves.append(self)
+
+    def add_wave_to_queue(self, queue, surface):
+        wave_points = []
+
+        for x in self.wave_range:
+            wave_points.append((x, int(eval(self.function))))
+
+        queue[surface].append(wave_points)
+
+
 class Button(GUIElement):
     all_buttons = []
     font = pygame.font.SysFont('ubuntumono', 15)
@@ -289,6 +309,7 @@ my_frame = Frame(position=(250, 260),
                  size=(700, 200),
                  elements=(keypad_button_1, keypad_button_2, keypad_button_3, keypad_button_4))
 
+my_wave = Wave('300*math.sin(math.radians(x)) + 300')
 
 # ----Main Loop---- #
 
@@ -311,6 +332,9 @@ while running:
     for button in Button.all_buttons:
         button.add_button_to_queue(draw_queue, button.surface)
         # button.try_function_call()
+
+    for wave in Wave.all_waves:
+        wave.add_wave_to_queue(draw_queue, wave.surface)
 
     draw_from_queue(draw_queue, display_surface)
     pygame.display.update()
