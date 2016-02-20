@@ -8,10 +8,12 @@ main.py
 
 
 import random
+import math
+import sys
 
 import pygame
 from pygame.locals import *
-import math
+
 
 pygame.init()
 
@@ -27,29 +29,8 @@ running = True
 max_FPS = 60
 clock = pygame.time.Clock()
 
-draw_queue = {'display_surface': [], 'window1': [], 'window2 etc...': []}
-
 
 # ----Global Functions---- #
-
-
-def draw_from_queue(queue, display_surf):
-
-    for surface in queue:
-        if surface == 'display_surface':
-            for draw_call in queue[surface]:
-                if len(draw_call) == 2:
-                    if type(draw_call[0]) == list:
-                        display_surf.fill(draw_call[0], draw_call[1])  # This is a rect fill call
-                    else:
-                        display_surf.blit(draw_call[1], draw_call[0])  # This is a blit to a surface
-                else:
-                    if len(draw_call) != 3:  # todo: This will break if there's a wave with three points
-                        pygame.draw.lines(display_surf, [0, 255, 0], False, draw_call, 1)
-                    else:
-                        display_surf.fill(draw_call[0])  # This is a surface fill
-
-        del queue[surface][:]
 
 
 def modify_colour(colour, increment):
@@ -70,6 +51,21 @@ def modify_colour(colour, increment):
 # ----Classes---- #
 
 
+class Surface(pygame.Surface):
+    all_surfaces = []
+
+    def __init__(self, elements, size):
+
+        super(Surface, self).__init__(size)
+
+        self.elements = elements
+
+        self.all_surfaces.append(self)
+
+    def get_elements(self):
+        return self.elements
+
+
 class GUIElement(pygame.Rect):
 
     def __init__(self, **kwargs):
@@ -86,8 +82,7 @@ class GUIElement(pygame.Rect):
         if 'colour' in kwargs:
             self.colour = kwargs['colour']
         else:
-            self.colour = [random.randint(20, 235), random.randint(20, 235), random.randint(20, 235)]
-
+            self.colour = [32, 178, 170]
         if 'surface' in kwargs:
             self.surface = kwargs['surface']
         else:
@@ -95,6 +90,7 @@ class GUIElement(pygame.Rect):
 
 
 class Frame(GUIElement):
+
     all_frames = []
 
     def __init__(self, **kwargs):
@@ -206,13 +202,12 @@ class Frame(GUIElement):
                     element.midtop = (self.centerx, edge_of_last_object + self.spacing)
                     edge_of_last_object = element.down
                 else:
+                    print(middle_of_last_object)
                     element.center = (self.centerx, middle_of_last_object + self.spacing)
-                    middle_of_last_object = element.centery
+                    middle_of_last_object = element.center
 
-    def add_frame_to_queue(self, queue, surface):
-
-        queue[surface].append((modify_colour(self.colour, -30), self))
-        queue[surface].append((self.colour, self.inflate(-8, -8)))
+    def get_elements(self):
+        return self.elements
 
 
 class Wave:
@@ -262,45 +257,31 @@ class Button(GUIElement):
 
         self.all_buttons.append(self)
 
-    def add_button_to_queue(self, queue, surface):
+        # button_centre = (button.centerx - button.text.get_rect().centerx,
+        #                  button.centery - button.text.get_rect().centery)
+        # queue[surface].append((button_centre, self.text))
 
-        # This is inefficient, but I changed it so it would be easy to debug. I'll sort it out later.
+    def render_button(self, surface):
 
         if self.collidepoint(pygame.mouse.get_pos()) and not pygame.mouse.get_pressed()[0]:
-            queue[surface].append((modify_colour(self.colour, 40), self))
-            queue[surface].append((self.colour, self.inflate(-8, -8)))
-            # print('hovering')
+            pygame.draw.rect(surface, modify_colour(self.colour, 40), self)
+            pygame.draw.rect(surface, self.colour, self.inflate(-8, -8))
 
         elif self.collidepoint(pygame.mouse.get_pos()) and pygame.mouse.get_pressed()[0]:
-            queue[surface].append((modify_colour(self.colour, 40), self))
-            queue[surface].append((modify_colour(self.colour, -30), self.inflate(-8, -8)))
-            # print('hovering and clicking')
+            pygame.draw.rect(surface, modify_colour(self.colour, 40), self)
+            pygame.draw.rect(surface, modify_colour(self.colour, -30), self.inflate(-8, -8))
 
         else:
-            queue[surface].append((modify_colour(self.colour, -30), self))
-            queue[surface].append((self.colour, self.inflate(-8, -8)))
-            # print('nothing')
-
-        button_centre = (button.centerx - button.text.get_rect().centerx,
-                         button.centery - button.text.get_rect().centery)
-        queue[surface].append((button_centre, self.text))
-
+            pygame.draw.rect(surface, modify_colour(self.colour, -30), self)
+            pygame.draw.rect(surface, self.colour, self.inflate(-8, -8))
 
 # ----Instance Declarations---- #
 
 
-# button = Button(text='Adam\'s Button',
-#                 colour=[17, 156, 170])
-#
-# second_button = Button(text='Adam\'s Other Button',
-#                        colour=[122, 122, 255])
-
-keypad_button_1 = Button(text='1')
-keypad_button_2 = Button(text='2')
-keypad_button_3 = Button(text='3')
-keypad_button_4 = Button(text='4')
-
-# If only a single object is in a frame, pass it in a list (e.g. elements=[button])
+keypad_button_1 = Button(text='One')
+keypad_button_2 = Button(text='Two')
+keypad_button_3 = Button(text='Three')
+keypad_button_4 = Button(text='Four')
 
 my_frame = Frame(position=(250, 260),
                  direction='down',
@@ -310,34 +291,37 @@ my_frame = Frame(position=(250, 260),
                  size=(700, 200),
                  elements=(keypad_button_1, keypad_button_2, keypad_button_3, keypad_button_4))
 
+my_surface = Surface([my_frame], (1280, 720))
+
 my_wave = Wave('300*math.sin(math.radians(x)) + 300')
+
 
 # ----Main Loop---- #
 
-
-# todo: Make screen clear every tick because buttons are duplicating when resizing frames
 
 while running:
 
     display_surface.fill([0, 0, 0])
 
     for event in pygame.event.get():
-
         if event.type == QUIT:
             running = False
 
     for frame in Frame.all_frames:
         frame.reassign_element_positions()
-        frame.add_frame_to_queue(draw_queue, frame.surface)
 
-    for button in Button.all_buttons:
-        button.add_button_to_queue(draw_queue, button.surface)
-        # button.try_function_call()
+    for surface in Surface.all_surfaces:
+        for element in surface.get_elements():
 
-    for wave in Wave.all_waves:
-        wave.add_wave_to_queue(draw_queue, wave.surface)
+            if isinstance(element, Button):
+                element.render_button(surface)
 
-    draw_from_queue(draw_queue, display_surface)
+            if isinstance(element, Frame):
+                for frame_element in element.get_elements():
+                    frame_element.render_button(surface)
+
+    display_surface.blit(my_surface, (0, 0))
+
     pygame.display.update()
 
     clock.tick(max_FPS)
