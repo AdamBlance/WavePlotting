@@ -202,9 +202,8 @@ class Frame(GUIElement):
                     element.midtop = (self.centerx, edge_of_last_object + self.spacing)
                     edge_of_last_object = element.down
                 else:
-                    print(middle_of_last_object)
                     element.center = (self.centerx, middle_of_last_object + self.spacing)
-                    middle_of_last_object = element.center
+                    middle_of_last_object = element.centery
 
     def get_elements(self):
         return self.elements
@@ -257,10 +256,6 @@ class Button(GUIElement):
 
         self.all_buttons.append(self)
 
-        # button_centre = (button.centerx - button.text.get_rect().centerx,
-        #                  button.centery - button.text.get_rect().centery)
-        # queue[surface].append((button_centre, self.text))
-
     def render_button(self, surface):
 
         if self.collidepoint(pygame.mouse.get_pos()) and not pygame.mouse.get_pressed()[0]:
@@ -274,6 +269,10 @@ class Button(GUIElement):
         else:
             pygame.draw.rect(surface, modify_colour(self.colour, -30), self)
             pygame.draw.rect(surface, self.colour, self.inflate(-8, -8))
+
+        button_centre = (self.centerx - self.text.get_rect().centerx, self.centery - self.text.get_rect().centery)
+        surface.blit(self.text, button_centre)
+
 
 # ----Instance Declarations---- #
 
