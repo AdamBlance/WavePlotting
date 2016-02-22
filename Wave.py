@@ -4,11 +4,10 @@ class Wave:
 
     def __init__(self, function):
         self.function = function
-        self.surface = 'display_surface'
 
         self.all_waves.append(self)
 
-    def add_wave_to_queue(self, queue, surface):
+    def add_wave_to_queue(self, queue, surface):  #todo: update this
         wave_points = []
 
         for x in self.wave_range:

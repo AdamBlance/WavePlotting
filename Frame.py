@@ -20,18 +20,13 @@ class Frame(GUIElement):
             self.width = kwargs['size'][0]
             self.height = kwargs['size'][1]
         else:
-            self.width = 500
-            self.height = 200
+            self.width = 0
+            self.height = 0
 
         if 'stacked' in kwargs:
             self.stacked = kwargs['stacked']
         else:
             self.stacked = True
-
-        if 'scale' in kwargs:
-            self.scale = kwargs['scale']
-        else:
-            self.scale = True
 
         if 'spacing' in kwargs:
             self.spacing = kwargs['spacing']
@@ -49,6 +44,11 @@ class Frame(GUIElement):
             self.direction = 'right'
             print('You must define direction on frame \'%s\'.')
 
+        if 'render' in kwargs:
+            self.render = kwargs['render']
+        else:
+            self.render = True
+
         self.all_frames.append(self)
 
     def reassign_element_positions(self):
@@ -59,8 +59,6 @@ class Frame(GUIElement):
             middle_of_last_object = self.left
 
             for element in self.elements:
-                if (element.height > self.height) and self.scale:
-                    self.height = element.height
 
                 if self.stacked:
                     element.midleft = (edge_of_last_object + self.spacing, self.centery)
@@ -75,8 +73,6 @@ class Frame(GUIElement):
             middle_of_last_object = self.right
 
             for element in self.elements:
-                if (element.height > self.height) and self.scale:
-                    self.height = element.height
 
                 if self.stacked:
                     element.midright = (edge_of_last_object - self.spacing, self.centery)
@@ -91,8 +87,6 @@ class Frame(GUIElement):
             middle_of_last_object = self.bottom
 
             for element in self.elements:
-                if (element.width > self.width) and self.scale:
-                    self.width = element.width
 
                 if self.stacked:
                     element.midbottom = (self.centerx, edge_of_last_object - self.spacing)
@@ -107,8 +101,6 @@ class Frame(GUIElement):
             middle_of_last_object = self.top
 
             for element in self.elements:
-                if (element.width > self.width) and self.scale:
-                    self.width = element.width
 
                 if self.stacked:
                     element.midtop = (self.centerx, edge_of_last_object + self.spacing)
@@ -116,6 +108,9 @@ class Frame(GUIElement):
                 else:
                     element.center = (self.centerx, middle_of_last_object + self.spacing)
                     middle_of_last_object = element.centery
+
+    def render_frame(self, surface):
+        pygame.draw.rect(surface, self.colour, self)
 
     def get_elements(self):
         return self.elements
